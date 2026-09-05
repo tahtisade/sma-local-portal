@@ -81,17 +81,21 @@ SMA Local Portal listens for Speedwire measurement packets on the local network 
 
 The host running SMA Local Portal must therefore be able to receive this multicast traffic from the SMA Energy Meter.
 
-### Optional RESOL integration
+### Optional integrations and display settings
 
-RESOL temperature monitoring is optional. SMA Local Portal runs normally without a `settings.yaml` file.
+SMA Local Portal runs normally without a `settings.yaml` file.
 
-To enable the integration, create the local settings file from the example:
+To configure optional integrations and installation-specific display settings, create the local settings file from the example:
 
 ```bash
 cp settings.example.yaml settings.yaml
 ```
 
-Edit `settings.yaml` to match the address and data-field mapping of your RESOL DL2 installation.
+The `resol` section enables optional RESOL temperature monitoring. Edit the URL and data-field mapping to match your RESOL DL2 installation.
+
+The optional `heater` section can be used to customize the PV surplus load display. The `title` setting changes the name shown in the web interface.
+
+Optional `temperature_limit` and `temperature_resume` values can also be configured for display purposes. These values are informational only: SMA Local Portal displays them but does not enforce temperature control or safety limits.
 
 The `settings.yaml` file is intentionally excluded from Git because it contains installation-specific configuration.
 

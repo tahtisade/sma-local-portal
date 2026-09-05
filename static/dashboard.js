@@ -100,7 +100,7 @@ async function updateDashboard() {
 
 
 // =========================
-// Elli / EVCC
+// EVCC
 // =========================
 
 async function updateElli() {
@@ -114,6 +114,9 @@ async function updateElli() {
         }
 
         const data = await response.json();
+
+        document.getElementById("evcc-title").textContent =
+            data.title || "EVCC";
 
         // =========================
         // Yhteys
@@ -240,7 +243,7 @@ async function updateElli() {
 }
 
 // =========================
-// LKV / Heater control
+// PV surplus load control
 // =========================
 
 async function updateHeater() {
@@ -267,7 +270,7 @@ async function updateHeater() {
 
 
         // =========================
-        // Vastustehon näyttö
+        // Kuormatehon näyttö
         // =========================
 
         document.getElementById(
@@ -282,13 +285,18 @@ async function updateHeater() {
         // Lämpötila
         // =========================
 
-        const temperature =
-            Number(resol["LKV 500l"]);
+        const temperatureElement =
+            document.getElementById("heater-temperature");
 
-        document.getElementById("heater-temperature").textContent =
-            Number.isFinite(temperature)
-                ? temperature.toFixed(1) + " °C"
-                : "--";
+        if (temperatureElement) {
+            const temperature =
+                Number(resol.temperature);
+
+            temperatureElement.textContent =
+                resol.temperature != null && Number.isFinite(temperature)
+                  ? temperature.toFixed(1) + " °C"
+                  : "--";
+        }
 
 
         // =========================
@@ -324,7 +332,7 @@ async function updateHeater() {
 
 
         // =========================
-        // Maksimi vastusteho
+        // Maksimi kuormateho
         // =========================
 
         const maxPower =
@@ -468,9 +476,12 @@ async function updateHeater() {
             error
         );
 
-        document.getElementById(
-            "heater-temperature"
-        ).textContent = "--";
+        const temperatureElement =
+            document.getElementById("heater-temperature");
+
+        if (temperatureElement) {
+            temperatureElement.textContent = "--";
+        }
 
         document.getElementById(
             "heater-spot-price"
@@ -530,7 +541,7 @@ async function updateEnergyStats() {
 }
 
 // =========================
-// Elli / EVCC ohjaus
+// EVCC ohjaus
 // =========================
 
 async function setElliMode(mode) {
@@ -565,7 +576,7 @@ async function setElliMode(mode) {
 
         console.error("Elli mode change failed:", error);
 
-        alert("Ellin ohjaus epäonnistui.");
+        alert("EVCC-ohjaus epäonnistui.");
 
     } finally {
 
@@ -673,7 +684,7 @@ async function setHeaterMode(mode) {
         );
 
         alert(
-            "LKV-ohjauksen tilan vaihto epäonnistui."
+            "Kuorman ohjaustilan vaihto epäonnistui."
         );
 
     } finally {
@@ -780,7 +791,7 @@ async function saveHeaterMaxPower() {
         || value > 6000
     ) {
         alert(
-            "Anna kelvollinen vastusteho 0–6000 W."
+            "Anna kelvollinen kuormateho 0–6000 W."
         );
         return;
     }
@@ -820,7 +831,7 @@ async function saveHeaterMaxPower() {
         );
 
         alert(
-            "Maksimivastustehon tallennus epäonnistui."
+            "Maksimikuormatehon tallennus epäonnistui."
         );
 
     } finally {

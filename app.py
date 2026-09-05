@@ -97,8 +97,23 @@ def start_energy_meter():
 @app.route("/")
 def index():
 
+    heater_config = settings.get("heater", {})
+
+    heater_title = heater_config.get(
+        "title",
+        "PV Surplus Load",
+    )
+
     return render_template(
-        "index.html"
+        "index.html",
+        heater_title=heater_title,
+        heater_temperature_limit=heater_config.get(
+            "temperature_limit"
+        ),
+        heater_temperature_resume=heater_config.get(
+            "temperature_resume"
+        ),
+        resol_enabled=resol is not None,
     )
 
 @app.route("/api/status")
@@ -138,7 +153,7 @@ def evcc_status():
             "charge_power": loadpoint.get("chargePower", 0),
             "charged_energy": loadpoint.get("chargedEnergy", 0),
             "solar_percentage": loadpoint.get("sessionSolarPercentage", 0),
-            "title": loadpoint.get("title", "Elli"),
+            "title": loadpoint.get("title", "EVCC"),
             "vehicle": loadpoint.get("vehicleTitle", ""),
             "pv_power": data.get("pvPower", 0),
             "site_title": data.get("siteTitle", "")

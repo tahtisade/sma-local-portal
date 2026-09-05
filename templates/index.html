@@ -100,7 +100,7 @@
 
     <div class="card" id="elli-card">
 
-        <h2>Elli</h2>
+        <h2 id="evcc-title">EVCC</h2>
 
         <table class="stats-table">
 
@@ -160,13 +160,15 @@
     </div>
 
        <div class="card" id="heater-card">
-        <h2>LKV 500 l</h2>
+        <h2>{{ heater_title }}</h2>
 
         <table class="stats-table">
+            {% if resol_enabled %}
             <tr>
                 <td>Lämpötila</td>
                 <td id="heater-temperature">--</td>
             </tr>
+            {% endif %}
 
             <tr>
                 <td>Spot-hinta</td>
@@ -195,7 +197,7 @@
             </tr>
 
             <tr>
-                <td>Maksimi vastusteho</td>
+                <td>Maksimi kuormateho</td>
                 <td>
                     <div class="heater-price-control">
                         <input
@@ -252,18 +254,22 @@
                 </td>
             </tr>
 
+            {% if heater_temperature_limit is not none %}
             <tr>
                 <td>Lämpötilaraja</td>
                 <td>
-                    71.0 °C
+                    {{ heater_temperature_limit }} °C
+                    {% if heater_temperature_resume is not none %}
                     <span class="heater-secondary">
-                        / palautus 69.0 °C
+                        / palautus {{ heater_temperature_resume }} °C
                     </span>
+                    {% endif %}
                 </td>
             </tr>
+            {% endif %}
 
             <tr>
-                <td>Vastusteho</td>
+                <td>Kuormateho</td>
                 <td id="heater-power">--</td>
             </tr>
 

@@ -86,7 +86,7 @@ class ResolService:
     def get_status(self):
         with self._lock:
             return {
-                "LKV 500l": self.temperature,
+                "temperature": self.temperature,
                 "timestamp": self.timestamp,
                 "error": self.error,
             }

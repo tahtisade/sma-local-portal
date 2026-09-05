@@ -3,3 +3,12 @@ resol:
   header_index: 1
   field_index: 11
   poll_interval: 10
+
+heater:
+  title: "PV Surplus Load"
+
+  # Optional display-only temperature settings.
+  # These values are shown in the web interface only.
+  # They do not implement temperature control or safety limits.
+  # temperature_limit: <value in °C>
+  # temperature_resume: <value in °C>
