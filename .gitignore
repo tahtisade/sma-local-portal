@@ -1,0 +1,29 @@
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.swp
+
+logs/
+
+sma_data.json
+
+# Runtime data
+history.db
+heater_control.json
+spot_prices.json
+spot_price_limit
+database/history.db
+devices.yaml
+
+# Local configuration
+settings.yaml
+
+# Development environment
+.venv/
+.DS_Store
+.idea/
+.vscode/
+
+# Local databases
+*.db

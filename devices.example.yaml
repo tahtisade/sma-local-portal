@@ -1,0 +1,18 @@
+devices:
+  - name: Sunny Tripower 5000
+    type: inverter
+    model: STP 5000TL-20
+    ip: 192.0.2.20
+    id: STP5000
+
+  - name: Sunny Tripower 6000
+    type: inverter
+    model: STP 6000TL-20
+    ip: 192.0.2.21
+    id: STP6000
+
+  - name: Sunny Tripower 6.0
+    type: inverter
+    model: STP 6.0-3AV-40
+    ip: 192.0.2.22
+    id: STP6.0

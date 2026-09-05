@@ -1,0 +1,4 @@
+Flask
+PyYAML
+pymodbus
+requests

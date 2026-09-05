@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>SMA Local Portal</title>
+
+<link rel="stylesheet" href="/static/style.css">
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+        <h1>SMA Local Portal</h1>
+        <div id="updated">--</div>
+    </header>
+
+    <section class="cards">
+
+        <div class="card">
+            <div class="title">PV-tuotanto</div>
+            <div id="pv_power" class="value">--</div>
+        </div>
+
+        <div class="card">
+            <div class="title">Talon kulutus</div>
+            <div id="load_power" class="value">--</div>
+        </div>
+
+        <div class="card">
+            <div class="title">Verkkoon vienti</div>
+            <div id="grid_export" class="value">--</div>
+        </div>
+
+        <div class="card">
+            <div class="title">Verkosta osto</div>
+            <div id="grid_import" class="value">--</div>
+        </div>
+
+    </section>
+
+
+<h2>Power History</h2>
+
+<div class="history-toolbar">
+
+    <button class="history-range active" data-range="15m">15 min</button>
+    <button class="history-range" data-range="30m">30 min</button>
+    <button class="history-range" data-range="1h">1 h</button>
+    <button class="history-range" data-range="2h">2 h</button>
+    <button class="history-range" data-range="3h">3 h</button>
+    <button class="history-range" data-range="6h">6 h</button>
+    <button class="history-range" data-range="12h">12 h</button>
+    <button class="history-range" data-range="24h">24 h</button>
+    <button class="history-range" data-range="48h">48 h</button>
+    <button class="history-range" data-range="7d">7 vrk</button>
+
+</div>
+
+<canvas id="historyChart" height="120"></canvas>
+
+</div>
+
+<div class="card">
+    <h2>Energiatilastot</h2>
+
+    <table class="stats-table">
+        <tr>
+            <td>PV-tuotanto</td>
+            <td id="pv-day-yield">--</td>
+        </tr>
+
+        <tr>
+            <td>Talon kulutus</td>
+            <td id="house-energy">--</td>
+        </tr>
+
+        <tr>
+            <td>Verkosta osto</td>
+            <td id="grid-import-energy">--</td>
+        </tr>
+
+        <tr>
+            <td>Verkkoon vienti</td>
+            <td id="grid-export-energy">--</td>
+        </tr>
+
+        <tr>
+            <td>Omavaraisuus</td>
+            <td id="self-sufficiency">--</td>
+        </tr>
+    </table>
+
+</div>
+
+    <div class="card" id="elli-card">
+
+        <h2>Elli</h2>
+
+        <table class="stats-table">
+
+            <tr>
+                <td>Tila</td>
+                <td id="elli-status">--</td>
+            </tr>
+
+            <tr>
+                <td>Lataus</td>
+                <td id="elli-charging">--</td>
+            </tr>
+
+            <tr>
+                <td>Latausteho</td>
+                <td id="elli-power">--</td>
+            </tr>
+
+            <tr>
+                <td>Käytössä</td>
+                <td id="elli-enabled">--</td>
+            </tr>
+
+            <tr>
+                <td>Ohjaus</td>
+                <td>
+                    <div id="elli-mode">--</div>
+
+                    <div class="elli-controls">
+                         <button class="elli-mode-button" data-mode="pv">
+                             PV
+                         </button>
+
+                         <button class="elli-mode-button" data-mode="now">
+                             Nyt
+                         </button>
+
+                         <button class="elli-mode-button" data-mode="off">
+                             Pois
+                         </button>
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td>Latausenergia</td>
+                <td id="elli-energy">--</td>
+            </tr>
+
+            <tr>
+                <td>Aurinkoenergia</td>
+                <td id="elli-solar-percentage">--</td>
+            </tr>
+
+        </table>
+
+    </div>
+
+       <div class="card" id="heater-card">
+        <h2>LKV 500 l</h2>
+
+        <table class="stats-table">
+            <tr>
+                <td>Lämpötila</td>
+                <td id="heater-temperature">--</td>
+            </tr>
+
+            <tr>
+                <td>Spot-hinta</td>
+                <td id="heater-spot-price">--</td>
+            </tr>
+
+            <tr>
+                <td>Hintaraja</td>
+                <td>
+                    <div class="heater-price-control">
+                        <input
+                            id="heater-price-limit"
+                            type="number"
+                            step="0.1"
+                            min="-100"
+                            max="500"
+                            value="10.0"
+                        >
+                        <span>snt/kWh</span>
+
+                        <button id="heater-price-save">
+                            Tallenna
+                        </button>
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td>Maksimi vastusteho</td>
+                <td>
+                    <div class="heater-price-control">
+                        <input
+                            id="heater-max-power"
+                            type="number"
+                            step="100"
+                            min="0"
+                            max="6000"
+                            value="6000"
+                        >
+                        <span>W</span>
+                        <button id="heater-max-power-save">
+                            Tallenna
+                        </button>
+                    </div>
+                </td>
+            </tr>
+
+
+            <tr>
+                <td>Ohjaustila</td>
+                <td>
+                    <div id="heater-mode">--</div>
+
+                    <div class="heater-controls">
+                        <button
+                            class="heater-mode-button"
+                            data-mode="off"
+                        >
+                            Pois
+                        </button>
+
+                        <button
+                            class="heater-mode-button"
+                            data-mode="pv"
+                        >
+                            PV
+                        </button>
+
+                        <button
+                            class="heater-mode-button"
+                            data-mode="pv_price"
+                        >
+                            PV + hinta
+                        </button>
+
+                        <button
+                            class="heater-mode-button"
+                            data-mode="on"
+                        >
+                            Päällä
+                        </button>
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td>Lämpötilaraja</td>
+                <td>
+                    71.0 °C
+                    <span class="heater-secondary">
+                        / palautus 69.0 °C
+                    </span>
+                </td>
+            </tr>
+
+            <tr>
+                <td>Vastusteho</td>
+                <td id="heater-power">--</td>
+            </tr>
+
+            <tr>
+                <td>Tila</td>
+                <td id="heater-status">--</td>
+            </tr>
+        </table>
+    </div>
+
+   <h2>Invertterit</h2>
+
+    <div id="inverters"></div>
+
+    <h2>Vaiheet</h2>
+
+    <div class="phase-grid">
+
+        <div class="phase" id="phase1"></div>
+        <div class="phase" id="phase2"></div>
+        <div class="phase" id="phase3"></div>
+
+    </div>
+
+
+<script src="/static/dashboard.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/static/js/history.js"></script>
+
+</body>
+</html>

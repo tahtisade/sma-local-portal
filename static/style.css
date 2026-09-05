@@ -1,0 +1,193 @@
+body {
+
+    margin:0;
+    background:#f4f6f8;
+    font-family:Arial,sans-serif;
+
+}
+
+.container{
+
+    max-width:1200px;
+    margin:auto;
+    padding:20px;
+
+}
+
+header{
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+}
+
+.cards{
+
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:20px;
+
+}
+
+.card{
+
+    background:white;
+    border-radius:12px;
+    padding:20px;
+    box-shadow:0 2px 10px rgba(0,0,0,.08);
+
+}
+
+.title{
+
+    color:#666;
+
+}
+
+.value{
+
+    font-size:2em;
+    font-weight:bold;
+    margin-top:10px;
+
+}
+
+#inverters{
+
+    display:grid;
+    gap:15px;
+
+}
+
+.inv{
+
+    background:white;
+    padding:15px;
+    border-radius:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+}
+
+.phase-grid{
+
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    gap:20px;
+
+}
+
+.phase{
+
+    background:white;
+    padding:15px;
+    border-radius:10px;
+
+}
+
+.history-toolbar {
+    margin-bottom: 15px;
+}
+
+.history-range {
+    padding: 6px 12px;
+    margin-right: 6px;
+    cursor: pointer;
+}
+
+.history-range.active {
+    font-weight: bold;
+}
+
+.elli-controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.elli-mode-button {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.elli-mode-button:hover {
+    opacity: 0.85;
+}
+
+.elli-mode-button:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+.elli-mode-button.active {
+    font-weight: bold;
+    outline: 2px solid currentColor;
+    outline-offset: 1px;
+}
+
+.heater-controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.heater-mode-button {
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.heater-mode-button:hover {
+    opacity: 0.85;
+}
+
+.heater-mode-button:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+.heater-mode-button.active {
+    font-weight: bold;
+    outline: 2px solid currentColor;
+    outline-offset: 1px;
+}
+
+.heater-price-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+#heater-price-limit {
+    width: 80px;
+    padding: 6px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+#heater-price-save {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+#heater-price-save:disabled {
+    opacity: 0.5;
+    cursor: wait;
+}
+
+.heater-secondary {
+    color: #777;
+    font-size: 0.9em;
+}

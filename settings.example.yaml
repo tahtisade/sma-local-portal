@@ -1,0 +1,5 @@
+resol:
+  url: "http://192.0.2.40/dlx/download/live?"
+  header_index: 1
+  field_index: 11
+  poll_interval: 10
