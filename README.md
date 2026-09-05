@@ -106,6 +106,12 @@ python -m app
 
 The web interface is available on port `8080`. By default, Flask listens on `0.0.0.0`, making the service reachable through the host computer's network interfaces.
 
+The web port can be changed with the `SMA_PORT` environment variable:
+
+```bash
+SMA_PORT=8081 python -m app
+```
+
 ### Running with systemd
 
 An example systemd service is provided in `services/sma-dashboard.service`.

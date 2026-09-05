@@ -5,6 +5,7 @@ import requests
 import threading
 import time
 import json
+import os
 from urllib.request import urlopen
 from urllib.error import URLError
 
@@ -359,6 +360,6 @@ if __name__ == "__main__":
 
         host="0.0.0.0",
 
-        port=8080
+        port=int(os.environ.get("SMA_PORT", "8080"))
 
     )
