@@ -118,7 +118,7 @@ SMA_PORT=8081 python -m app
 
 ### Running with systemd
 
-An example systemd service is provided in `services/sma-dashboard.service`.
+An example systemd service is provided in `services/sma-local-portal.service`.
 
 Before installing it, adjust the `User`, `Group`, `WorkingDirectory`, and `ExecStart` values to match your system.
 
