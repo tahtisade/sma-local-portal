@@ -44,7 +44,7 @@ Optional temperature monitoring has been tested with a RESOL DL2 data logger con
 
 ## Requirements
 
-- Python 3
+- Python 3 (tested with Python 3.12)
 - Linux system connected to the same local network as the SMA devices
 - Network access to SMA Speedwire multicast traffic
 - Modbus TCP enabled on the configured SMA inverters
@@ -56,6 +56,8 @@ Python dependencies are listed in `requirements.txt`.
 Clone the repository and create a Python virtual environment:
 
 ```bash
+git clone https://github.com/tahtisade/sma-local-portal.git
+cd sma-local-portal
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -143,6 +145,8 @@ SMA Local Portal exposes its current and historical data through a local REST AP
 | `/api/evcc/mode` | POST | Change EVCC charging mode |
 | `/api/heater/control` | GET / POST | Read or change heater-control settings |
 | `/api/heater/status` | POST | Update heater-controller power and status |
+
+The `/api/heater/*` endpoint names are retained for compatibility with the original installation. They provide the interface for the external PV surplus load controller and do not require the controlled load to be a heater.
 
 ## EVCC integration
 
