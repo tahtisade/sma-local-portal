@@ -71,7 +71,9 @@ Create the local device configuration from the provided example:
 cp devices.example.yaml devices.yaml
 ```
 
-Edit `devices.yaml` and replace the example addresses with the local IP addresses of your SMA inverters.
+Edit `devices.yaml` and replace the example addresses with the local IP addresses of your SMA inverters. Keep only the inverter entries that are present in your installation.
+
+The current implementation has been tested with the SMA inverter models listed above. Other inverter manufacturers are not currently supported.
 
 The `devices.yaml` file is intentionally excluded from Git because it contains installation-specific network configuration.
 
