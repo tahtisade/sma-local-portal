@@ -267,47 +267,40 @@ class SpotPriceService:
         # Käynnistyksessä haetaan heti.
         try:
             self.fetch_prices()
-
             local_now = datetime.now()
-            self._last_fetch_date = (
-                local_now.date()
-            )
-
+            self._last_fetch_date = local_now.date()
         except Exception as exc:
             with self._lock:
-                self.error = str(
-                    exc
-                )
+                self.error = str(exc)
 
         while not self._stop_event.is_set():
             now = datetime.now()
 
-            should_fetch = (
-                now.hour
-                >= self.fetch_hour
-                and (
-                    self._last_fetch_date
-                    != now.date()
-                )
+            # Normaali päivittäinen haku klo fetch_hour jälkeen.
+            daily_fetch = (
+                now.hour >= self.fetch_hour
+                and self._last_fetch_date != now.date()
             )
 
-            if should_fetch:
+            # Jos nykyhetkelle ei löydy hintaa, cache on vanhentunut
+            # tai puutteellinen. Yritetään hakea uudelleen riippumatta
+            # kellonajasta.
+            current_price_missing = (
+                self.get_current_price() is None
+            )
+
+            if daily_fetch or current_price_missing:
                 try:
                     self.fetch_prices()
-
-                    self._last_fetch_date = (
-                        now.date()
-                    )
-
+                    self._last_fetch_date = now.date()
                 except Exception as exc:
                     with self._lock:
-                        self.error = str(
-                            exc
-                        )
+                        self.error = str(exc)
 
             self._stop_event.wait(
                 self.retry_interval
             )
+
 
     # ========================================================
     # START / STOP

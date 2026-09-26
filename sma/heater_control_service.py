@@ -1,6 +1,7 @@
 import json
 import os
 import threading
+from datetime import datetime
 
 
 class HeaterControlService:
@@ -9,6 +10,7 @@ class HeaterControlService:
         "off",
         "pv",
         "pv_price",
+        "price",
         "on",
     }
 
@@ -21,6 +23,8 @@ class HeaterControlService:
         default_mode="pv_price",
         default_spot_price_limit=10.0,
         default_max_power=6000,
+        default_price_start="00:00",
+        default_price_end="06:00",
     ):
         self.config_file = config_file
         self._lock = threading.Lock()
@@ -29,11 +33,38 @@ class HeaterControlService:
         self.spot_price_limit = default_spot_price_limit
         self.max_power = default_max_power
 
+        self.price_start = default_price_start
+        self.price_end = default_price_end
+
         self.controller_power = 0
         self.controller_reason = "UNKNOWN"
         self.controller_timestamp = None
 
         self._load()
+
+    # ========================================================
+    # TIME VALIDATION
+    # ========================================================
+
+    @staticmethod
+    def _validate_time(value):
+
+        if not isinstance(value, str):
+            raise ValueError(
+                "Invalid heater price time"
+            )
+
+        try:
+            parsed = datetime.strptime(
+                value,
+                "%H:%M"
+            )
+        except ValueError as exc:
+            raise ValueError(
+                "Invalid heater price time"
+            ) from exc
+
+        return parsed.strftime("%H:%M")
 
     # ========================================================
     # LOAD
@@ -66,10 +97,19 @@ class HeaterControlService:
                 "max_power"
             )
 
+            price_start = data.get(
+                "price_start"
+            )
+
+            price_end = data.get(
+                "price_end"
+            )
+
             if mode in self.ALLOWED_MODES:
                 self.mode = mode
 
             if price_limit is not None:
+
                 price_limit = float(
                     price_limit
                 )
@@ -84,6 +124,7 @@ class HeaterControlService:
                     )
 
             if max_power is not None:
+
                 max_power = int(
                     max_power
                 )
@@ -97,7 +138,24 @@ class HeaterControlService:
                         max_power
                     )
 
+            if price_start is not None:
+
+                self.price_start = (
+                    self._validate_time(
+                        price_start
+                    )
+                )
+
+            if price_end is not None:
+
+                self.price_end = (
+                    self._validate_time(
+                        price_end
+                    )
+                )
+
         except Exception as exc:
+
             print(
                 f"Heater control config load error: "
                 f"{exc}"
@@ -119,6 +177,14 @@ class HeaterControlService:
             "max_power": (
                 self.max_power
             ),
+
+            "price_start": (
+                self.price_start
+            ),
+
+            "price_end": (
+                self.price_end
+            ),
         }
 
         temp_file = (
@@ -131,6 +197,7 @@ class HeaterControlService:
             "w",
             encoding="utf-8"
         ) as f:
+
             json.dump(
                 data,
                 f,
@@ -162,6 +229,14 @@ class HeaterControlService:
                     self.max_power
                 ),
 
+                "price_start": (
+                    self.price_start
+                ),
+
+                "price_end": (
+                    self.price_end
+                ),
+
                 "controller_power": (
                     self.controller_power
                 ),
@@ -184,6 +259,8 @@ class HeaterControlService:
         mode=None,
         spot_price_limit=None,
         max_power=None,
+        price_start=None,
+        price_end=None,
     ):
 
         with self._lock:
@@ -191,6 +268,7 @@ class HeaterControlService:
             if mode is not None:
 
                 if mode not in self.ALLOWED_MODES:
+
                     raise ValueError(
                         "Invalid heater mode"
                     )
@@ -231,6 +309,22 @@ class HeaterControlService:
 
                 self.max_power = value
 
+            if price_start is not None:
+
+                self.price_start = (
+                    self._validate_time(
+                        price_start
+                    )
+                )
+
+            if price_end is not None:
+
+                self.price_end = (
+                    self._validate_time(
+                        price_end
+                    )
+                )
+
             self._save()
 
             return {
@@ -243,7 +337,19 @@ class HeaterControlService:
                 "max_power": (
                     self.max_power
                 ),
+
+                "price_start": (
+                    self.price_start
+                ),
+
+                "price_end": (
+                    self.price_end
+                ),
             }
+
+    # ========================================================
+    # CONTROLLER STATUS
+    # ========================================================
 
     def update_controller_status(
         self,

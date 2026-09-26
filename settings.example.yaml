@@ -12,3 +12,15 @@ heater:
   # They do not implement temperature control or safety limits.
   # temperature_limit: <value in °C>
   # temperature_resume: <value in °C>
+
+charge_meter:
+  # Optional Modbus RTU energy meter used for measuring
+  # the actual EV charging power and energy.
+  enabled: false
+  port: "/dev/ttyUSB0"
+  device_id: 1
+  baudrate: 9600
+  bytesize: 8
+  parity: "E"
+  stopbits: 1
+  timeout: 2

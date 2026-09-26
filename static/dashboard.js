@@ -145,6 +145,17 @@ async function updateElli() {
         document.getElementById("elli-power").textContent =
             (Number(data.charge_power || 0) / 1000).toFixed(1) + " kW";
 
+        // =========================
+        // Todellinen latausteho
+        // =========================
+
+        if (data.actual_charge_power_error) {
+            document.getElementById("elli-actual-power").textContent = "--";
+        } else {
+            document.getElementById("elli-actual-power").textContent =
+                (Number(data.actual_charge_power || 0) / 1000).toFixed(2) + " kW";
+        }
+
 
         // =========================
         // Käytössä
@@ -204,6 +215,12 @@ async function updateElli() {
         document.getElementById("elli-energy").textContent =
             (Number(data.charged_energy || 0) / 1000).toFixed(2) + " kWh";
 
+        document.getElementById("elli-daily-energy").textContent =
+            Number(data.actual_charge_daily_energy || 0).toFixed(2) + " kWh";
+
+        document.getElementById("elli-total-energy").textContent =
+            Number(data.actual_charge_total_energy || 0).toFixed(2) + " kWh";
+
         // =========================
         // Aurinkoenergian osuus
         // =========================
@@ -235,6 +252,15 @@ async function updateElli() {
             "--";
 
         document.getElementById("elli-energy").textContent =
+            "--";
+
+        document.getElementById("elli-daily-energy").textContent =
+            "--";
+
+        document.getElementById("elli-total-energy").textContent =
+            "--";
+
+        document.getElementById("elli-actual-power").textContent =
             "--";
 
         document.getElementById("elli-solar-percentage").textContent =
@@ -330,6 +356,41 @@ async function updateHeater() {
                 priceLimit.toFixed(1);
         }
 
+        // =========================
+        // Hinta-tilan aika
+        // =========================
+
+        const priceStart =
+            heater.price_start || "00:00";
+
+        const priceEnd =
+            heater.price_end || "06:00";
+
+        const priceStartInput =
+            document.getElementById(
+                "heater-price-start"
+            );
+
+        const priceEndInput =
+            document.getElementById(
+                "heater-price-end"
+            );
+
+        if (
+            document.activeElement
+            !== priceStartInput
+        ) {
+            priceStartInput.value =
+                priceStart;
+        }
+
+        if (
+            document.activeElement
+            !== priceEndInput
+        ) {
+            priceEndInput.value =
+                priceEnd;
+        }
 
         // =========================
         // Maksimi kuormateho
@@ -373,6 +434,10 @@ async function updateHeater() {
 
             case "pv_price":
                 modeElement.textContent = "PV + hinta";
+                break;
+
+            case "price":
+                modeElement.textContent = "Hinta";
                 break;
 
             case "on":
@@ -437,6 +502,16 @@ async function updateHeater() {
         case "SPOT_HIGH":
             statusElement.textContent =
                 "Spot-hinta yli rajan";
+            break;
+
+        case "PRICE_TIME":
+            statusElement.textContent =
+                "Hinta – aikaikkunan ulkopuolella";
+            break;
+
+        case "PRICE_ON":
+            statusElement.textContent =
+                "Hinta – lämmitys päällä";
             break;
 
         case "DHW_MAX":
@@ -631,6 +706,13 @@ document.getElementById(
     saveHeaterPriceLimit
 );
 
+document
+    .getElementById("heater-price-time-save")
+    .addEventListener(
+        "click",
+        saveHeaterPriceTime
+    );
+
 document.getElementById(
     "heater-max-power-save"
 ).addEventListener(
@@ -764,6 +846,73 @@ async function saveHeaterPriceLimit() {
 
     }
 
+}
+
+async function saveHeaterPriceTime()
+{
+    const startInput =
+        document.getElementById(
+            "heater-price-start"
+        );
+
+    const endInput =
+        document.getElementById(
+            "heater-price-end"
+        );
+
+    const priceStart =
+        startInput.value;
+
+    const priceEnd =
+        endInput.value;
+
+    if (!priceStart || !priceEnd) {
+        alert(
+            "Anna sekä alkamis- että päättymisaika."
+        );
+        return;
+    }
+
+    try {
+        const response = await fetch(
+            "/api/heater/control",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type":
+                        "application/json"
+                },
+                body: JSON.stringify({
+                    price_start: priceStart,
+                    price_end: priceEnd
+                })
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                "Aika-asetuksen tallennus epäonnistui"
+            );
+        }
+
+        await response.json();
+
+        console.log(
+            "Heater price time saved:",
+            priceStart,
+            priceEnd
+        );
+    }
+    catch (error) {
+        console.error(
+            "Heater price time save error:",
+            error
+        );
+
+        alert(
+            "Hinta-tilan ajan tallennus epäonnistui."
+        );
+    }
 }
 
 // =========================

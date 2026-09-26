@@ -191,3 +191,18 @@ header{
     color: #777;
     font-size: 0.9em;
 }
+
+.stats-table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.stats-table td {
+    padding: 4px 0;
+    vertical-align: top;
+}
+
+.stats-table td:first-child {
+    font-weight: bold;
+    padding-right: 16px;
+}

@@ -120,6 +120,21 @@
             </tr>
 
             <tr>
+                <td>Todellinen latausteho</td>
+                <td id="elli-actual-power">--</td>
+            </tr>
+
+            <tr>
+                <td>Latausenergia tänään</td>
+                <td id="elli-daily-energy">--</td>
+            </tr>
+
+            <tr>
+                <td>Latausenergia yhteensä</td>
+                <td id="elli-total-energy">--</td>
+            </tr>
+
+            <tr>
                 <td>Käytössä</td>
                 <td id="elli-enabled">--</td>
             </tr>
@@ -197,6 +212,28 @@
             </tr>
 
             <tr>
+                <td>Hinta-tilan aika</td>
+                <td>
+                    <div class="heater-price-control">
+                        <input
+                            id="heater-price-start"
+                            type="time"
+                            value="00:00"
+                        >
+                        <span>–</span>
+                        <input
+                            id="heater-price-end"
+                            type="time"
+                            value="06:00"
+                        >
+                        <button id="heater-price-time-save">
+                            Tallenna
+                        </button>
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
                 <td>Maksimi kuormateho</td>
                 <td>
                     <div class="heater-price-control">
@@ -242,6 +279,13 @@
                             data-mode="pv_price"
                         >
                             PV + hinta
+                        </button>
+
+                        <button
+                            class="heater-mode-button"
+                            data-mode="price"
+                        >
+                            Hinta
                         </button>
 
                         <button

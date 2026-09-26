@@ -16,12 +16,47 @@ from sma.save_service import SaveService
 from sma.history_service import HistoryService
 from sma.spot_price_service import SpotPriceService
 from sma.heater_control_service import HeaterControlService
+from sma.charge_meter_service import ChargeMeterService
 from sma.discovery import load_devices
 from sma.settings import load_settings
 
 history = HistoryService()
 
 settings = load_settings()
+charge_meter_config = settings.get("charge_meter", {})
+charge_meter = None
+
+if charge_meter_config.get("enabled", False):
+    charge_meter = ChargeMeterService(
+        port=charge_meter_config.get(
+            "port",
+            "/dev/ttyUSB0"
+        ),
+        device_id=charge_meter_config.get(
+            "device_id",
+            1
+        ),
+        baudrate=charge_meter_config.get(
+            "baudrate",
+            9600
+        ),
+        bytesize=charge_meter_config.get(
+            "bytesize",
+            8
+        ),
+        parity=charge_meter_config.get(
+            "parity",
+            "E"
+        ),
+        stopbits=charge_meter_config.get(
+            "stopbits",
+            1
+        ),
+        timeout=charge_meter_config.get(
+            "timeout",
+            2
+        ),
+    )
 resol_config = settings.get("resol")
 resol = None
 
@@ -145,6 +180,18 @@ def evcc_status():
         # EVCC:n ensimmäinen loadpoint
         loadpoint = data.get("loadpoints", [{}])[0]
 
+        meter_data = (
+            charge_meter.get()
+            if charge_meter
+            else {
+                "power": 0.0,
+                "total_energy": 0.0,
+                "daily_energy": 0.0,
+                "error": None,
+                "timestamp": None,
+            }
+        )
+
         return jsonify({
             "connected": loadpoint.get("connected", False),
             "charging": loadpoint.get("charging", False),
@@ -156,7 +203,12 @@ def evcc_status():
             "title": loadpoint.get("title", "EVCC"),
             "vehicle": loadpoint.get("vehicleTitle", ""),
             "pv_power": data.get("pvPower", 0),
-            "site_title": data.get("siteTitle", "")
+            "site_title": data.get("siteTitle", ""),
+            "site_title": data.get("siteTitle", ""),
+            "actual_charge_power": meter_data["power"],
+            "actual_charge_total_energy": meter_data["total_energy"],
+            "actual_charge_daily_energy": meter_data["daily_energy"],
+            "actual_charge_power_error": meter_data["error"],
         })
 
     except (URLError, TimeoutError, OSError) as e:
@@ -225,6 +277,12 @@ def heater_control_api():
             ),
             max_power=data.get(
                 "max_power"
+            ),
+            price_start=data.get(
+                "price_start"
+            ),
+            price_end=data.get(
+                "price_end"
             ),
         )
 
@@ -337,6 +395,12 @@ if __name__ == "__main__":
         resol.start()
 
     spot_price.start()
+
+    if charge_meter:
+        threading.Thread(
+            target=charge_meter.run,
+            daemon=True
+        ).start()
 
     threading.Thread(
 
