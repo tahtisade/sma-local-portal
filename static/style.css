@@ -205,4 +205,5 @@ header{
 .stats-table td:first-child {
     font-weight: bold;
     padding-right: 16px;
+    width: 190px;
 }

@@ -108,12 +108,57 @@ async function updateElli() {
     try {
 
         const response = await fetch("/api/evcc");
+        const controlResponse = await fetch("/api/evcc/control");
 
         if (!response.ok) {
             throw new Error("EVCC API error");
         }
 
+        if (!controlResponse.ok) {
+            throw new Error("Elli control API error");
+        }
+
         const data = await response.json();
+        const control = await controlResponse.json();
+
+        // =========================
+        // Elli hinta-asetukset
+        // =========================
+
+        const priceLimit =
+            Number(control.spot_price_limit);
+
+        const priceLimitInput =
+            document.getElementById("elli-price-limit");
+
+        const priceStartInput =
+            document.getElementById("elli-price-start");
+
+        const priceEndInput =
+            document.getElementById("elli-price-end");
+
+        if (document.activeElement !== priceLimitInput) {
+            priceLimitInput.value =
+                Number.isFinite(priceLimit)
+                    ? priceLimit.toFixed(1)
+                    : "";
+        }
+
+        if (
+            document.activeElement !== priceStartInput &&
+            !priceStartInput.dataset.dirty
+        ) {
+            priceStartInput.value =
+                control.price_start || "00:00";
+        }
+
+        if (
+            document.activeElement !== priceEndInput &&
+            !priceEndInput.dataset.dirty
+        ) {
+            priceEndInput.value =
+                control.price_end || "00:00";
+        }
 
         document.getElementById("evcc-title").textContent =
             data.title || "EVCC";
@@ -174,10 +219,14 @@ async function updateElli() {
         const modeElement =
             document.getElementById("elli-mode");
 
-        switch (data.mode) {
+        switch (control.mode) {
 
             case "pv":
                 modeElement.textContent = "PV";
+                break;
+
+            case "price":
+                modeElement.textContent = "Hinta";
                 break;
 
             case "now":
@@ -190,7 +239,7 @@ async function updateElli() {
 
             default:
                 modeElement.textContent =
-                    data.mode || "--";
+                    control.mode || "--";
         }
 
 
@@ -202,7 +251,7 @@ async function updateElli() {
 
             button.classList.toggle(
                 "active",
-                button.dataset.mode === data.mode
+                button.dataset.mode === control.mode
             );
 
         });
@@ -337,6 +386,11 @@ async function updateHeater() {
                 ? spotPrice.toFixed(3) + " snt/kWh"
                 : "--";
 
+        document.getElementById("elli-spot-price").textContent =
+            Number.isFinite(spotPrice)
+                ? spotPrice.toFixed(3) + " snt/kWh"
+                : "--";
+
 
         // =========================
         // Hintaraja
@@ -377,16 +431,16 @@ async function updateHeater() {
             );
 
         if (
-            document.activeElement
-            !== priceStartInput
+            document.activeElement !== priceStartInput &&
+            !priceStartInput.dataset.dirty
         ) {
             priceStartInput.value =
                 priceStart;
         }
 
         if (
-            document.activeElement
-            !== priceEndInput
+            document.activeElement !== priceEndInput &&
+            !priceEndInput.dataset.dirty
         ) {
             priceEndInput.value =
                 priceEnd;
@@ -630,7 +684,7 @@ async function setElliMode(mode) {
 
     try {
 
-        const response = await fetch("/api/evcc/mode", {
+        const response = await fetch("/api/evcc/control", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
@@ -641,7 +695,7 @@ async function setElliMode(mode) {
         });
 
         if (!response.ok) {
-            throw new Error("EVCC mode change failed");
+            throw new Error("Elli control mode change failed");
         }
 
         // Haetaan uusi tila heti
@@ -675,6 +729,158 @@ document.querySelectorAll(".elli-mode-button").forEach(button => {
     });
 
 });
+
+
+// Elli hintarajan tallennus
+
+document.getElementById("elli-price-save").addEventListener(
+    "click",
+    async () => {
+
+        const button =
+            document.getElementById("elli-price-save");
+
+        const input =
+            document.getElementById("elli-price-limit");
+
+        const priceLimit =
+            Number(input.value);
+
+        if (!Number.isFinite(priceLimit)) {
+            alert("Virheellinen hintaraja.");
+            return;
+        }
+
+        button.disabled = true;
+
+        try {
+
+            const response = await fetch(
+                "/api/evcc/control",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        spot_price_limit: priceLimit
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    "Elli price limit save failed"
+                );
+            }
+
+            await updateElli();
+
+        } catch (error) {
+
+            console.error(
+                "Elli price limit save failed:",
+                error
+            );
+
+            alert(
+                "Ellin hintarajan tallennus epäonnistui."
+            );
+
+        } finally {
+
+            button.disabled = false;
+        }
+    }
+);
+
+
+// Elli hinta-tilan ajan tallennus
+
+document.getElementById("elli-price-start").addEventListener(
+    "input",
+    function () {
+        this.dataset.dirty = "true";
+    }
+);
+
+document.getElementById("elli-price-end").addEventListener(
+    "input",
+    function () {
+        this.dataset.dirty = "true";
+    }
+);
+
+document.getElementById("elli-price-time-save").addEventListener(
+    "click",
+    async () => {
+
+        const button =
+            document.getElementById("elli-price-time-save");
+
+        const startInput =
+            document.getElementById("elli-price-start");
+
+        const endInput =
+            document.getElementById("elli-price-end");
+
+        const priceStart =
+            startInput.value;
+
+        const priceEnd =
+            endInput.value;
+
+        if (!priceStart || !priceEnd) {
+            alert("Virheellinen hinta-tilan aika.");
+            return;
+        }
+
+        button.disabled = true;
+
+        try {
+
+            const response = await fetch(
+                "/api/evcc/control",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        price_start: priceStart,
+                        price_end: priceEnd
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    "Elli price time save failed"
+                );
+            }
+
+            startInput.dataset.dirty = "";
+            endInput.dataset.dirty = "";
+
+            await updateElli();
+
+        } catch (error) {
+
+            console.error(
+                "Elli price time save failed:",
+                error
+            );
+
+            alert(
+                "Ellin hinta-tilan ajan tallennus epäonnistui."
+            );
+
+        } finally {
+
+            button.disabled = false;
+        }
+    }
+);
 
 
 // =========================
@@ -848,6 +1054,20 @@ async function saveHeaterPriceLimit() {
 
 }
 
+document.getElementById("heater-price-start").addEventListener(
+    "input",
+    function () {
+        this.dataset.dirty = "true";
+    }
+);
+
+document.getElementById("heater-price-end").addEventListener(
+    "input",
+    function () {
+        this.dataset.dirty = "true";
+    }
+);
+
 async function saveHeaterPriceTime()
 {
     const startInput =
@@ -896,6 +1116,9 @@ async function saveHeaterPriceTime()
         }
 
         await response.json();
+
+        startInput.dataset.dirty = "";
+        endInput.dataset.dirty = "";
 
         console.log(
             "Heater price time saved:",

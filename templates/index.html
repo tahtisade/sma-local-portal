@@ -140,6 +140,53 @@
             </tr>
 
             <tr>
+                <td>Spot-hinta</td>
+                <td id="elli-spot-price">--</td>
+            </tr>
+
+            <tr>
+                <td>Hintaraja</td>
+                <td>
+                    <div class="heater-price-control">
+                        <input
+                            id="elli-price-limit"
+                            type="number"
+                            step="0.1"
+                            min="-100"
+                            max="500"
+                            value="10.0"
+                        >
+                        <span>snt/kWh</span>
+                        <button id="elli-price-save">
+                            Tallenna
+                        </button>
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
+                <td>Hinta-tilan aika</td>
+                <td>
+                    <div class="heater-price-control">
+                        <input
+                            id="elli-price-start"
+                            type="time"
+                            value="00:00"
+                        >
+                        <span>–</span>
+                        <input
+                            id="elli-price-end"
+                            type="time"
+                            value="06:00"
+                        >
+                        <button id="elli-price-time-save">
+                            Tallenna
+                        </button>
+                    </div>
+                </td>
+            </tr>
+
+            <tr>
                 <td>Ohjaus</td>
                 <td>
                     <div id="elli-mode">--</div>
@@ -147,6 +194,10 @@
                     <div class="elli-controls">
                          <button class="elli-mode-button" data-mode="pv">
                              PV
+                         </button>
+
+                         <button class="elli-mode-button" data-mode="price">
+                             Hinta
                          </button>
 
                          <button class="elli-mode-button" data-mode="now">

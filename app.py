@@ -16,6 +16,7 @@ from sma.save_service import SaveService
 from sma.history_service import HistoryService
 from sma.spot_price_service import SpotPriceService
 from sma.heater_control_service import HeaterControlService
+from sma.elli_control_service import ElliControlService
 from sma.charge_meter_service import ChargeMeterService
 from sma.discovery import load_devices
 from sma.settings import load_settings
@@ -79,6 +80,12 @@ heater_control = HeaterControlService(
     default_mode="pv_price",
     default_spot_price_limit=10.0,
 )
+elli_control = ElliControlService(
+    config_file="elli_control.json",
+    default_mode="off",
+    default_spot_price_limit=10.0,
+)
+
 
 app = Flask(__name__)
 
@@ -165,6 +172,159 @@ def status():
     return jsonify(data)
 
 from flask import request
+
+# -------------------------
+# EVCC helpers
+# -------------------------
+
+def get_evcc_mode():
+
+    with urlopen(
+        "http://127.0.0.1:7070/api/state",
+        timeout=2
+    ) as response:
+
+        data = json.load(response)
+
+    loadpoints = data.get(
+        "loadpoints",
+        []
+    )
+
+    if not loadpoints:
+        raise RuntimeError(
+            "EVCC loadpoint not found"
+        )
+
+    return loadpoints[0].get(
+        "mode",
+        "unknown"
+    )
+
+
+def set_evcc_mode(mode):
+
+    if mode not in {
+        "pv",
+        "now",
+        "off",
+    }:
+        raise ValueError(
+            "Invalid EVCC mode"
+        )
+
+    response = requests.post(
+        f"http://127.0.0.1:7070/"
+        f"api/loadpoints/1/mode/{mode}",
+        timeout=5
+    )
+
+    response.raise_for_status()
+
+
+def run_elli_controller_once():
+
+    try:
+        control = elli_control.get_status()
+        control_mode = control["mode"]
+
+        if control_mode == "price":
+
+            spot_status = (
+                spot_price.get_status()
+            )
+
+            decision = (
+                elli_control.get_price_decision(
+                    spot_status.get("current")
+                )
+            )
+
+            desired_evcc_mode = (
+                decision["evcc_mode"]
+            )
+
+            reason = (
+                decision["reason"]
+            )
+
+        elif control_mode in {
+            "off",
+            "pv",
+            "now",
+        }:
+
+            desired_evcc_mode = (
+                control_mode
+            )
+
+            reason = (
+                "MANUAL_"
+                + control_mode.upper()
+            )
+
+        else:
+
+            desired_evcc_mode = "off"
+            reason = "MODE_ERROR"
+
+        current_evcc_mode = (
+            get_evcc_mode()
+        )
+
+        if (
+            current_evcc_mode
+            != desired_evcc_mode
+        ):
+            set_evcc_mode(
+                desired_evcc_mode
+            )
+
+            current_evcc_mode = (
+                desired_evcc_mode
+            )
+
+        elli_control.update_controller_status(
+            current_evcc_mode,
+            reason
+        )
+
+        return {
+            "control_mode": control_mode,
+            "evcc_mode": current_evcc_mode,
+            "reason": reason,
+        }
+
+    except Exception as exc:
+
+        print(
+            f"Elli controller error: "
+            f"{exc}"
+        )
+
+        elli_control.update_controller_status(
+            "unknown",
+            "ERROR"
+        )
+
+        return {
+            "control_mode": "unknown",
+            "evcc_mode": "unknown",
+            "reason": "ERROR",
+            "error": str(exc),
+        }
+
+
+def run_elli_controller():
+
+    print("Elli controller started")
+
+    while True:
+
+        run_elli_controller_once()
+
+        time.sleep(5)
+
 
 @app.route("/api/evcc")
 def evcc_status():
@@ -253,6 +413,53 @@ def evcc_mode():
         return jsonify({
             "error": str(error)
         }), 502
+
+@app.route(
+    "/api/evcc/control",
+    methods=["GET", "POST"]
+)
+def evcc_control_api():
+
+    if request.method == "GET":
+        return jsonify(
+            elli_control.get_status()
+        )
+
+    data = (
+        request.get_json(
+            silent=True
+        )
+        or {}
+    )
+
+    try:
+
+        result = elli_control.update(
+            mode=data.get("mode"),
+            spot_price_limit=data.get(
+                "spot_price_limit"
+            ),
+            price_start=data.get(
+                "price_start"
+            ),
+            price_end=data.get(
+                "price_end"
+            ),
+        )
+
+        return jsonify(
+            result
+        )
+
+    except (
+        ValueError,
+        TypeError
+    ) as exc:
+
+        return jsonify({
+            "error": str(exc)
+        }), 400
+
 
 @app.route("/api/heater/control",methods=["GET", "POST"])
 def heater_control_api():
@@ -401,6 +608,11 @@ if __name__ == "__main__":
             target=charge_meter.run,
             daemon=True
         ).start()
+
+    threading.Thread(
+        target=run_elli_controller,
+        daemon=True
+    ).start()
 
     threading.Thread(
 

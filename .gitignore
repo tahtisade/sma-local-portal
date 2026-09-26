@@ -11,6 +11,7 @@ sma_data.json
 # Runtime data
 history.db
 heater_control.json
+elli_control.json
 charge_meter_daily.json
 spot_prices.json
 spot_price_limit
