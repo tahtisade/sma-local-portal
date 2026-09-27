@@ -16,8 +16,34 @@ The REST API also provides a common local data source for other applications, su
 - REST API for local integrations
 - Optional RESOL temperature monitoring
 - Finnish spot electricity price integration
-- EVCC status and charging-mode integration
+- Optional Modbus energy meter for measuring EV charging power and energy
+- EVCC status and charging control
+- PV-surplus-based EV charging mode
+- Spot-price based EV charging mode with configurable price limit and time window
 - Interface for an external PV surplus load controller
+- PV-surplus and spot-price-based load-control modes
+
+## Screenshots
+
+### Dashboard overview
+
+Real-time PV production, household consumption, grid import/export, energy totals, and historical power data.
+
+![SMA Local Portal dashboard](docs/images/dashboard-overview.png)
+
+### PV surplus load control
+
+Control and status view for an external PV surplus load controller. The example installation uses the controller for domestic hot water heating with PV surplus and spot-price-based operating modes.
+
+![PV surplus load control](docs/images/heater-control.png)
+
+### Elli / EVCC charging control
+
+EVCC integration with charging status, measured charging energy, spot-price information, and selectable Off, PV, Price, and Now operating modes.
+
+In the screenshot below, the vehicle is being charged with a separate 8 A charger rather than the Elli charger. Therefore EVCC correctly reports the Elli charger as disconnected, while the separate Modbus energy meter still measures an actual charging power of approximately 1.75 kW.
+
+![Elli EVCC charging control](docs/images/elli-control.png)
 
 ## Architecture
 
@@ -97,6 +123,8 @@ cp settings.example.yaml settings.yaml
 
 The `resol` section enables optional RESOL temperature monitoring. Edit the URL and data-field mapping to match your RESOL DL2 installation.
 
+The optional `charge_meter` section enables direct measurement of EV charging power and energy using a Modbus RTU energy meter. Configure the serial device and Modbus communication settings to match the meter used in your installation; `settings.example.yaml` contains the available parameters and example values. This measurement is independent of EVCC and can therefore also show charging power when a vehicle is being charged by another charger.
+
 The optional `heater` section can be used to customize the PV surplus load display. The `title` setting changes the name shown in the web interface.
 
 Optional `temperature_limit` and `temperature_resume` values can also be configured for display purposes. These values are informational only: SMA Local Portal displays them but does not enforce temperature control or safety limits.
@@ -145,6 +173,7 @@ SMA Local Portal exposes its current and historical data through a local REST AP
 | `/api/energy_stats` | GET | Energy statistics |
 | `/api/evcc` | GET | EVCC charging status |
 | `/api/evcc/mode` | POST | Change EVCC charging mode |
+| `/api/evcc/control` | GET / POST | Read or change EVCC charging-control settings |
 | `/api/heater/control` | GET / POST | Read or change heater-control settings |
 | `/api/heater/status` | POST | Update heater-controller power and status |
 
@@ -156,7 +185,15 @@ EVCC integration is optional and is not required for the core SMA monitoring fun
 
 The current implementation expects EVCC to be running on the same host at `127.0.0.1:7070` and uses the first configured EVCC loadpoint.
 
-SMA Local Portal can display EVCC charging information and change the loadpoint mode between `pv`, `now`, and `off`.
+SMA Local Portal can display EVCC charging status and control the loadpoint using Off, PV, Price, and Now operating modes.
+
+In `pv` mode, charging is delegated to EVCC's PV charging logic. In `now` mode, charging is enabled immediately, while `off` disables charging.
+
+The `price` mode adds a local spot-price controller on top of EVCC. A configurable price limit and time window determine when charging is allowed. When the current spot price is at or below the configured limit and the current time is inside the configured window, SMA Local Portal switches EVCC to `now` mode. Otherwise EVCC is switched to `off`.
+
+A price time window of `00:00`–`00:00` is interpreted as active for the full 24-hour day. Time windows crossing midnight, such as `23:00`–`07:00`, are also supported.
+
+If valid spot-price data is not available, price-controlled charging remains disabled.
 
 The EVCC address is currently fixed in `app.py` and may be made configurable in a future version.
 
@@ -164,7 +201,11 @@ The EVCC address is currently fixed in `app.py` and may be made configurable in 
 
 SMA Local Portal includes an interface for an external controller that can use surplus PV energy for a controllable load.
 
-The current installation uses the interface for domestic hot water heating. The portal stores control settings such as operating mode, spot-price limit, and maximum power, while the external controller performs the actual power control and reports its status back to the portal.
+The current installation uses the interface for domestic hot water heating. SMA Local Portal stores the control settings, while the external controller performs the actual power control and reports its status back to the portal.
+
+The control interface supports several operating modes, including direct operation, PV-surplus control, spot-price control, and a combined PV-surplus and spot-price mode. The configurable settings include maximum power, spot-price limit, and a time window for price-controlled operation.
+
+In price-controlled mode, the external controller can operate the load when the current spot price is at or below the configured limit and the current time is inside the configured time window. A time window of `00:00`–`00:00` represents the full 24-hour day, and windows crossing midnight are also supported.
 
 The load size and hardware implementation are installation-specific. SMA Local Portal does not assume a particular heater power or element configuration.
 
@@ -184,7 +225,9 @@ The current implementation includes Finnish spot electricity prices using the P�
 
 Price data is cached locally in `spot_prices.json`. If the external price service is unavailable, the error is reported in the price status while the rest of SMA Local Portal continues to operate.
 
-Spot-price information can also be used as a condition by the external surplus-load controller.
+Spot-price information can be used as a control condition for both the external PV surplus load controller and the EVCC charging integration. Each controller has its own configurable price limit and operating settings.
+
+For safety and predictable operation, price-controlled modes do not enable their controlled load when valid current spot-price data is unavailable.
 
 ## Project status and future development
 
