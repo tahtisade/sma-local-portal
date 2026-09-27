@@ -26,6 +26,13 @@ class ModbusReader:
                 device_id=self.unit_id
             )
 
+        except TypeError:
+            rr = client.read_holding_registers(
+                address=address,
+                count=2,
+                slave=self.unit_id
+            )
+
             if rr.isError():
                 return None
 
@@ -54,6 +61,13 @@ class ModbusReader:
                 address=address,
                 count=4,
                 device_id=self.unit_id
+            )
+
+        except TypeError:
+            rr = client.read_holding_registers(
+                address=address,
+                count=4,
+                slave=self.unit_id
             )
 
             if rr.isError():

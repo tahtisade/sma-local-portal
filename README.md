@@ -70,10 +70,15 @@ Optional temperature monitoring has been tested with a RESOL DL2 data logger con
 
 ## Requirements
 
-- Python 3 (tested with Python 3.12)
+- Python 3 (tested with Python 3.9 and Python 3.12)
+
 - Linux system connected to the same local network as the SMA devices
+
 - Network access to SMA Speedwire multicast traffic
+
 - Modbus TCP enabled on the configured SMA inverters
+
+The application has also been tested successfully on a Raspberry Pi 4 running Raspberry Pi OS 11 (Bullseye) with Python 3.9.2.
 
 Python dependencies are listed in `requirements.txt`.
 
@@ -86,6 +91,7 @@ git clone https://github.com/tahtisade/sma-local-portal.git
 cd sma-local-portal
 python3 -m venv venv
 source venv/bin/activate
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
@@ -110,6 +116,8 @@ The SMA Energy Meter does not require an IP address in `devices.yaml`.
 SMA Local Portal listens for Speedwire measurement packets on the local network using UDP multicast address `239.12.255.254` and port `9522`.
 
 The host running SMA Local Portal must therefore be able to receive this multicast traffic from the SMA Energy Meter.
+
+On some networks, Wi-Fi access points may not forward Speedwire multicast traffic from the wired LAN to wireless clients. If SMA Energy Meter data is missing, a wired Ethernet connection is recommended. This was observed during Raspberry Pi testing, where inverter communication worked over Wi-Fi but Energy Meter multicast traffic was only available over Ethernet.
 
 ### Optional integrations and display settings
 
