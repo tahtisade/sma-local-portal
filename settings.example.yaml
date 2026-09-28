@@ -1,8 +1,17 @@
+# Optional RESOL DL2 integration.
 resol:
-  url: "http://192.0.2.40/dlx/download/live?"
+  enabled: false
+  url: "http://RESOL-DL2-IP/dlx/download/live?"
   header_index: 1
   field_index: 11
   poll_interval: 10
+
+# Optional Ouman EH-203 integration.
+# Requires a suitable RS-232 adapter and pyserial.
+ouman_eh203:
+  enabled: false
+  port: "/dev/serial/by-id/YOUR-RS232-ADAPTER"
+  poll_interval: 60
 
 heater:
   title: "PV Surplus Load"
@@ -17,6 +26,8 @@ charge_meter:
   # Optional Modbus RTU energy meter used for measuring
   # the actual EV charging power and energy.
   enabled: false
+  # For production use, a persistent /dev/serial/by-id/... path
+  # is recommended instead of a changing /dev/ttyUSBx device name.
   port: "/dev/ttyUSB0"
   device_id: 1
   baudrate: 9600

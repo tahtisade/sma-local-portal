@@ -29,3 +29,16 @@ settings.yaml
 
 # Local databases
 *.db
+
+# Local runtime / test output
+heater_*.csv
+
+# Local backup files
+*.bak-*
+
+# Local SDM630 diagnostic tools
+test_sdm630.py
+test_sdm630_energy.py
+
+# Archived measurement data
+data/

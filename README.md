@@ -129,7 +129,9 @@ To configure optional integrations and installation-specific display settings, c
 cp settings.example.yaml settings.yaml
 ```
 
-The `resol` section enables optional RESOL temperature monitoring. Edit the URL and data-field mapping to match your RESOL DL2 installation.
+The optional `resol` section provides RESOL DL2 temperature monitoring. Set `enabled: true` and edit the URL and data-field mapping to match your RESOL DL2 installation. Existing configurations without an `enabled` setting remain supported for backward compatibility.
+
+The optional `ouman_eh203` section provides monitoring of an Ouman EH-203 controller through its RS-232 modem interface. Set `enabled: true` and configure the serial device path for a suitable RS-232 adapter. The integration emulates the modem communication used by the EH-203 and exposes the received measurements through the `/api/status` endpoint. This integration has been tested with an Ouman EH-203.
 
 The optional `charge_meter` section enables direct measurement of EV charging power and energy using a Modbus RTU energy meter. Configure the serial device and Modbus communication settings to match the meter used in your installation; `settings.example.yaml` contains the available parameters and example values. This measurement is independent of EVCC and can therefore also show charging power when a vehicle is being charged by another charger.
 

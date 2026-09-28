@@ -2,3 +2,4 @@ Flask
 PyYAML
 pymodbus
 requests
+pyserial

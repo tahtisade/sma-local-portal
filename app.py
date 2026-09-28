@@ -20,6 +20,7 @@ from sma.elli_control_service import ElliControlService
 from sma.charge_meter_service import ChargeMeterService
 from sma.discovery import load_devices
 from sma.settings import load_settings
+from sma.ouman_eh203 import OumanEH203Service
 
 history = HistoryService()
 
@@ -58,15 +59,24 @@ if charge_meter_config.get("enabled", False):
             2
         ),
     )
-resol_config = settings.get("resol")
+resol_config = settings.get("resol", {})
 resol = None
 
-if resol_config:
+if resol_config and resol_config.get("enabled", True):
     resol = ResolService(
         url=resol_config["url"],
         header_index=resol_config.get("header_index", 1),
         field_index=resol_config.get("field_index", 11),
         poll_interval=resol_config.get("poll_interval", 10),
+    )
+
+ouman_eh203_config = settings.get("ouman_eh203", {})
+ouman_eh203 = None
+
+if ouman_eh203_config.get("enabled", False):
+    ouman_eh203 = OumanEH203Service(
+        port=ouman_eh203_config["port"],
+        poll_interval=ouman_eh203_config.get("poll_interval", 60),
     )
 
 spot_price = SpotPriceService(
@@ -168,6 +178,9 @@ def status():
     )
     data["spot_price"] = spot_price.get_status()
     data["heater_control"] = heater_control.get_status()
+
+    if ouman_eh203:
+        data["ouman_eh203"] = ouman_eh203.get_status()
 
     return jsonify(data)
 
@@ -363,7 +376,6 @@ def evcc_status():
             "title": loadpoint.get("title", "EVCC"),
             "vehicle": loadpoint.get("vehicleTitle", ""),
             "pv_power": data.get("pvPower", 0),
-            "site_title": data.get("siteTitle", ""),
             "site_title": data.get("siteTitle", ""),
             "actual_charge_power": meter_data["power"],
             "actual_charge_total_energy": meter_data["total_energy"],
@@ -600,6 +612,9 @@ if __name__ == "__main__":
 
     if resol:
         resol.start()
+
+    if ouman_eh203:
+        ouman_eh203.start()
 
     spot_price.start()
 
