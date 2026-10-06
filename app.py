@@ -19,12 +19,25 @@ from sma.heater_control_service import HeaterControlService
 from sma.elli_control_service import ElliControlService
 from sma.charge_meter_service import ChargeMeterService
 from sma.discovery import load_devices
+from sma.heater_meter_service import HeaterMeterService
 from sma.settings import load_settings
 from sma.ouman_eh203 import OumanEH203Service
+from sma.mitsubishi_service import MitsubishiService
 
 history = HistoryService()
 
 settings = load_settings()
+heater_meter_config = settings.get("heater_meter", {})
+heater_meter = (HeaterMeterService(heater_meter_config)
+                if heater_meter_config.get("enabled", False) else None)
+
+vilp_meter_config = settings.get("vilp_meter", {})
+vilp_meter = None
+if vilp_meter_config.get("enabled", False):
+    vilp_meter_config = dict(vilp_meter_config)
+    vilp_meter_config.setdefault("daily_state_file", "vilp_meter_daily.db")
+    vilp_meter = HeaterMeterService(vilp_meter_config)
+
 charge_meter_config = settings.get("charge_meter", {})
 charge_meter = None
 
@@ -77,6 +90,17 @@ if ouman_eh203_config.get("enabled", False):
     ouman_eh203 = OumanEH203Service(
         port=ouman_eh203_config["port"],
         poll_interval=ouman_eh203_config.get("poll_interval", 60),
+    )
+
+mitsubishi_config = settings.get("mitsubishi", {})
+mitsubishi = None
+
+if mitsubishi_config.get("enabled", False):
+    mitsubishi = MitsubishiService(
+        shelly_url=mitsubishi_config["shelly_url"],
+        temp_min=mitsubishi_config.get("temp_min", 5.0),
+        temp_max=mitsubishi_config.get("temp_max", 60.0),
+        timeout=mitsubishi_config.get("timeout", 3.0),
     )
 
 spot_price = SpotPriceService(
@@ -171,6 +195,10 @@ def index():
 @app.route("/api/status")
 def status():
     data = state.get()
+    data["heater_meter"] = (heater_meter.get_status() if heater_meter
+                            else {"enabled": False})
+    data["vilp_meter"] = (vilp_meter.get_status() if vilp_meter
+                          else {"enabled": False})
     data["resol"] = (
         resol.get_status()
         if resol
@@ -181,6 +209,9 @@ def status():
 
     if ouman_eh203:
         data["ouman_eh203"] = ouman_eh203.get_status()
+
+    if mitsubishi:
+        data["mitsubishi"] = mitsubishi.get_status()
 
     return jsonify(data)
 
@@ -381,6 +412,7 @@ def evcc_status():
             "actual_charge_total_energy": meter_data["total_energy"],
             "actual_charge_daily_energy": meter_data["daily_energy"],
             "actual_charge_power_error": meter_data["error"],
+            "actual_charge_timestamp": meter_data["timestamp"],
         })
 
     except (URLError, TimeoutError, OSError) as e:
@@ -490,6 +522,7 @@ def heater_control_api():
 
     try:
         result = heater_control.update(
+            temperature_target=data.get("temperature_target"),
             mode=data.get("mode"),
             spot_price_limit=data.get(
                 "spot_price_limit"
@@ -537,12 +570,20 @@ def heater_status_api():
         "reason"
     )
 
+    controller_status = data.get(
+        "controller_status"
+    )
+
     if (
         power is None
         or reason is None
+        or controller_status is None
     ):
         return jsonify({
-            "error": "power and reason required"
+            "error": (
+                "power, reason and "
+                "controller_status required"
+            )
         }), 400
 
     try:
@@ -550,6 +591,7 @@ def heater_status_api():
             heater_control.update_controller_status(
                 power,
                 reason,
+                controller_status,
             )
         )
 
@@ -616,6 +658,15 @@ if __name__ == "__main__":
     if ouman_eh203:
         ouman_eh203.start()
 
+    if mitsubishi:
+        mitsubishi.start()
+
+    if heater_meter:
+        heater_meter.start()
+
+    if vilp_meter:
+        vilp_meter.start()
+
     spot_price.start()
 
     if charge_meter:
@@ -661,6 +712,10 @@ if __name__ == "__main__":
 
     time.sleep(2)
 
+
+    # Suppress normal Werkzeug HTTP access logging.
+    import logging
+    logging.getLogger("werkzeug").setLevel(logging.ERROR)
 
     app.run(
 

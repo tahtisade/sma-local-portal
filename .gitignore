@@ -42,3 +42,15 @@ test_sdm630_energy.py
 
 # Archived measurement data
 data/
+
+# Private Tuya meter credentials and state
+devices.json
+heater_meter_daily.db*
+backups/
+
+vilp_meter_daily.db*
+
+# Local source backups
+*.before-*
+*.bak
+/lkv-temperature-*/

@@ -6,19 +6,31 @@ import time
 FILE = "sma_data.json"
 
 
+def empty_state():
+    return {
+        "inverters": {},
+        "energy_meter": {},
+        "summary": {}
+    }
+
+
 def save(data):
 
     data["timestamp"] = time.time()
 
-DEBUG = False
+    DEBUG = False
 
-if DEBUG:
-    print("Saving to:", os.path.abspath(FILE))
+    if DEBUG:
+        print("Saving to:", os.path.abspath(FILE))
 
-    with open(FILE, "w") as f:
+    tmp_file = FILE + ".tmp"
 
+    with open(tmp_file, "w") as f:
         json.dump(data, f, indent=2)
+        f.flush()
+        os.fsync(f.fileno())
 
+    os.replace(tmp_file, FILE)
 
 
 def load():
@@ -26,16 +38,12 @@ def load():
     print("Loading from:", os.path.abspath(FILE))
 
     if not os.path.exists(FILE):
+        return empty_state()
 
-        return {
-            "inverters": {},
-            "energy_meter": {},
-            "summary": {}
-        }
+    try:
+        with open(FILE) as f:
+            return json.load(f)
 
-
-    with open(FILE) as f:
-
-        text = f.read()
-
-    return json.loads(text)
+    except (json.JSONDecodeError, OSError) as e:
+        print(f"WARNING: Could not load {FILE}: {e}")
+        return empty_state()

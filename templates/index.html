@@ -285,6 +285,21 @@
             </tr>
 
             <tr>
+                <td>Lämmityksen lämpötilatavoite</td>
+                <td>
+                    <div class="heater-price-control">
+                        <input id="heater-temperature-target" type="number"
+                               min="40" max="71" step="0.1" value="71.0">
+                        <span>°C</span>
+                        <button id="heater-temperature-target-save">Tallenna</button>
+                    </div>
+                    <div id="heater-temperature-target-status" role="status"
+                         aria-live="polite" style="font-size:0.9em;margin-top:0.4em"></div>
+                    <small>Kaikki lämmitystilat · jatkuu 2 °C tavoitetta alempana · yläraja 71 °C</small>
+                </td>
+            </tr>
+
+            <tr>
                 <td>Maksimi kuormateho</td>
                 <td>
                     <div class="heater-price-control">
@@ -366,6 +381,23 @@
             <tr>
                 <td>Kuormateho</td>
                 <td id="heater-power">--</td>
+            </tr>
+
+            <tr class="heater-meter-row" hidden>
+                <td>Todellinen teho</td>
+                <td id="heater-measured-power">--</td>
+            </tr>
+            <tr class="heater-meter-row" hidden>
+                <td id="heater-daily-label">Energia tänään</td>
+                <td id="heater-measured-daily">--</td>
+            </tr>
+            <tr class="heater-meter-row" hidden>
+                <td>Energia yhteensä</td>
+                <td id="heater-measured-total">--</td>
+            </tr>
+            <tr class="heater-meter-row" hidden>
+                <td>Energiamittari</td>
+                <td id="heater-meter-status">--</td>
             </tr>
 
             <tr>

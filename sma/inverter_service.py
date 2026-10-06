@@ -60,7 +60,8 @@ class InverterService:
                 {
                      "power": power,
                      "total_yield": total_yield,
-                     "day_yield": day_yield
+                     "day_yield": day_yield,
+                     "timestamp": time.time()
                 }
             )
 

@@ -160,6 +160,8 @@ async function updateElli() {
                 control.price_end || "00:00";
         }
 
+        priceTimeSynced("elli", control.price_start, control.price_end);
+
         document.getElementById("evcc-title").textContent =
             data.title || "EVCC";
 
@@ -321,6 +323,35 @@ async function updateElli() {
 // PV surplus load control
 // =========================
 
+// Optional measured load data, independent of the commanded heater power.
+function updateHeaterMeter(meter, apiFailed = false) {
+    if (!apiFailed) {
+        document.querySelectorAll(".heater-meter-row").forEach(row => {
+            row.hidden = !meter?.enabled;
+        });
+    }
+    const format = (value, unit) =>
+        typeof value === "number" && Number.isFinite(value)
+            ? value.toLocaleString("fi-FI", {
+                minimumFractionDigits: 2, maximumFractionDigits: 2
+            }) + " " + unit : "--";
+    document.getElementById("heater-measured-power").textContent =
+        format(apiFailed ? null : meter?.power_kw, "kW");
+    document.getElementById("heater-measured-daily").textContent =
+        format(apiFailed ? null : meter?.daily_energy_kwh, "kWh");
+    document.getElementById("heater-measured-total").textContent =
+        format(apiFailed ? null : meter?.total_energy_kwh, "kWh");
+    const label = document.getElementById("heater-daily-label");
+    label.textContent = meter?.daily_energy_partial
+        ? "Energia tänään (vajaa)" : "Energia tänään (arvio)";
+    label.title = "Lasketaan kokonaisenergian muutoksesta Suomen vuorokauden mukaan. " +
+        "Vajaa lukema alkaa seurannan aloituksesta. Vuorokauden raja on likimääräinen.";
+    document.getElementById("heater-meter-status").textContent = apiFailed
+        ? "Ei yhteyttä portaaliin"
+        : meter?.status === "live" ? "Mittaus käytössä"
+        : meter?.connected ? "Odotetaan tuoreita mittauksia" : "Ei yhteyttä";
+}
+
 async function updateHeater() {
 
     try {
@@ -332,6 +363,7 @@ async function updateHeater() {
         }
 
         const data = await response.json();
+        updateHeaterMeter(data.heater_meter);
 
         const resol = data.resol || {};
         const spot = data.spot_price || {};
@@ -447,6 +479,9 @@ async function updateHeater() {
         }
 
         // =========================
+        priceTimeSynced("heater", heater.price_start, heater.price_end);
+        temperatureTargetSynced(heater.temperature_target);
+
         // Maksimi kuormateho
         // =========================
 
@@ -570,7 +605,7 @@ async function updateHeater() {
 
         case "DHW_MAX":
             statusElement.textContent =
-                "Lämpötilaraja saavutettu";
+                "Lämpötilatavoite saavutettu / lämpötilalukko";
             break;
 
         case "OFF":
@@ -599,6 +634,8 @@ async function updateHeater() {
     }
 
     } catch (error) {
+
+        updateHeaterMeter(null, true);
 
         console.error(
             "Heater update failed:",
@@ -797,91 +834,9 @@ document.getElementById("elli-price-save").addEventListener(
 
 // Elli hinta-tilan ajan tallennus
 
-document.getElementById("elli-price-start").addEventListener(
-    "input",
-    function () {
-        this.dataset.dirty = "true";
-    }
-);
-
-document.getElementById("elli-price-end").addEventListener(
-    "input",
-    function () {
-        this.dataset.dirty = "true";
-    }
-);
-
 document.getElementById("elli-price-time-save").addEventListener(
-    "click",
-    async () => {
-
-        const button =
-            document.getElementById("elli-price-time-save");
-
-        const startInput =
-            document.getElementById("elli-price-start");
-
-        const endInput =
-            document.getElementById("elli-price-end");
-
-        const priceStart =
-            startInput.value;
-
-        const priceEnd =
-            endInput.value;
-
-        if (!priceStart || !priceEnd) {
-            alert("Virheellinen hinta-tilan aika.");
-            return;
-        }
-
-        button.disabled = true;
-
-        try {
-
-            const response = await fetch(
-                "/api/evcc/control",
-                {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        price_start: priceStart,
-                        price_end: priceEnd
-                    })
-                }
-            );
-
-            if (!response.ok) {
-                throw new Error(
-                    "Elli price time save failed"
-                );
-            }
-
-            startInput.dataset.dirty = "";
-            endInput.dataset.dirty = "";
-
-            await updateElli();
-
-        } catch (error) {
-
-            console.error(
-                "Elli price time save failed:",
-                error
-            );
-
-            alert(
-                "Ellin hinta-tilan ajan tallennus epäonnistui."
-            );
-
-        } finally {
-
-            button.disabled = false;
-        }
-    }
+    "click", () => savePriceTime("elli", "/api/evcc/control")
 );
-
 
 // =========================
 // Heater controls
@@ -1054,88 +1009,8 @@ async function saveHeaterPriceLimit() {
 
 }
 
-document.getElementById("heater-price-start").addEventListener(
-    "input",
-    function () {
-        this.dataset.dirty = "true";
-    }
-);
-
-document.getElementById("heater-price-end").addEventListener(
-    "input",
-    function () {
-        this.dataset.dirty = "true";
-    }
-);
-
-async function saveHeaterPriceTime()
-{
-    const startInput =
-        document.getElementById(
-            "heater-price-start"
-        );
-
-    const endInput =
-        document.getElementById(
-            "heater-price-end"
-        );
-
-    const priceStart =
-        startInput.value;
-
-    const priceEnd =
-        endInput.value;
-
-    if (!priceStart || !priceEnd) {
-        alert(
-            "Anna sekä alkamis- että päättymisaika."
-        );
-        return;
-    }
-
-    try {
-        const response = await fetch(
-            "/api/heater/control",
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type":
-                        "application/json"
-                },
-                body: JSON.stringify({
-                    price_start: priceStart,
-                    price_end: priceEnd
-                })
-            }
-        );
-
-        if (!response.ok) {
-            throw new Error(
-                "Aika-asetuksen tallennus epäonnistui"
-            );
-        }
-
-        await response.json();
-
-        startInput.dataset.dirty = "";
-        endInput.dataset.dirty = "";
-
-        console.log(
-            "Heater price time saved:",
-            priceStart,
-            priceEnd
-        );
-    }
-    catch (error) {
-        console.error(
-            "Heater price time save error:",
-            error
-        );
-
-        alert(
-            "Hinta-tilan ajan tallennus epäonnistui."
-        );
-    }
+async function saveHeaterPriceTime() {
+    await savePriceTime("heater", "/api/heater/control");
 }
 
 // =========================
@@ -1214,6 +1089,195 @@ async function saveHeaterMaxPower() {
 
 
 // =========================
+// Explicit unsaved/saved state for both price-time controls.
+const priceTimeStates = new Map();
+
+function priceTimeElements(prefix) {
+    return {
+        start: document.getElementById(prefix + "-price-start"),
+        end: document.getElementById(prefix + "-price-end"),
+        button: document.getElementById(prefix + "-price-time-save"),
+        status: document.getElementById(prefix + "-price-time-status")
+    };
+}
+
+function renderPriceTime(prefix) {
+    const state = priceTimeStates.get(prefix);
+    if (!state) return;
+    const {start, end, button, status} = priceTimeElements(prefix);
+    const dirty = state.saved ? start.value !== state.saved.start || end.value !== state.saved.end : state.edited;
+    // Protect both fields from polling while one field contains an unsaved edit.
+    start.dataset.dirty = end.dataset.dirty = dirty ? "true" : "";
+    start.disabled = end.disabled = state.saving;
+    button.disabled = state.saving || !dirty;
+    button.textContent = state.saving ? "Tallennetaan…" : (dirty ? "Tallenna" : "Tallennettu");
+    button.style.background = dirty ? "#fff4ce" : "#263b4a";
+    button.style.color = dirty ? "#604400" : "#fff";
+    button.style.border = "2px solid " + (dirty ? "#9c7200" : "#263b4a");
+    button.style.opacity = "1";
+    const active = state.saved ? "Käytössä " + state.saved.start + "–" + state.saved.end : "Tallennettua aikaa ei vielä saatu";
+    status.textContent = state.saving ? "Tallennetaan…" :
+        (state.error ? "Tallennus epäonnistui. " + active :
+         (dirty ? "Tallentamatta · " + active : "Tallennettu · " + active));
+    status.style.color = state.error ? "#a00000" : (dirty ? "#805900" : "#263b4a");
+}
+
+function priceTimeSynced(prefix, start, end) {
+    const state = priceTimeStates.get(prefix);
+    if (!state || state.saving || typeof start !== "string" || typeof end !== "string") return;
+    state.saved = {start, end};
+    renderPriceTime(prefix);
+}
+
+async function savePriceTime(prefix, url) {
+    const state = priceTimeStates.get(prefix);
+    if (!state || state.saving) return;
+    const {start, end} = priceTimeElements(prefix);
+    const value = {price_start: start.value, price_end: end.value};
+    const valid = v => /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
+    if (!valid(value.price_start) || !valid(value.price_end)) {
+        alert("Anna sekä alkamis- että päättymisaika.");
+        return;
+    }
+    state.saving = true;
+    state.error = false;
+    renderPriceTime(prefix);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+        const response = await fetch(url, {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(value), signal: controller.signal
+        });
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        const result = await response.json();
+        if (result.price_start !== value.price_start || result.price_end !== value.price_end) {
+            throw new Error("Palvelin ei vahvistanut aika-asetusta");
+        }
+        state.saved = {start: result.price_start, end: result.price_end};
+    } catch (error) {
+        state.error = true;
+        console.error("Price time save failed:", error);
+    } finally {
+        clearTimeout(timer);
+        state.saving = false;
+        renderPriceTime(prefix);
+    }
+}
+
+for (const prefix of ["elli", "heater"]) {
+    const {start, end, button} = priceTimeElements(prefix);
+    if (!start || !end || !button) continue;
+    priceTimeStates.set(prefix, {saved: null, saving: false, error: false, edited: false});
+    const status = document.createElement("div");
+    status.id = prefix + "-price-time-status";
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+    status.style.fontSize = "0.9em";
+    status.style.marginTop = "0.4em";
+    button.insertAdjacentElement("afterend", status);
+    for (const input of [start, end]) {
+        input.addEventListener("input", () => {
+            priceTimeStates.get(prefix).error = false;
+            priceTimeStates.get(prefix).edited = true;
+            renderPriceTime(prefix);
+        });
+    }
+    renderPriceTime(prefix);
+}
+
+window.addEventListener("beforeunload", event => {
+    const pending = [...priceTimeStates.keys()].some(prefix => {
+        const {start, end} = priceTimeElements(prefix);
+        const state = priceTimeStates.get(prefix);
+        return state.saving || (state.saved && (start.value !== state.saved.start || end.value !== state.saved.end));
+    });
+    if (pending || temperatureTargetState.saving || temperatureTargetDirty()) { event.preventDefault(); event.returnValue = ""; }
+});
+
+
+// Temperature target: polling never overwrites an unsaved edit.
+const temperatureTargetState = {saved: null, edited: false, saving: false, error: false};
+const temperatureTargetInput = document.getElementById("heater-temperature-target");
+const temperatureTargetButton = document.getElementById("heater-temperature-target-save");
+const temperatureTargetStatus = document.getElementById("heater-temperature-target-status");
+
+function temperatureTargetDirty() {
+    if (!temperatureTargetInput) return false;
+    return temperatureTargetState.saved === null ? temperatureTargetState.edited :
+        temperatureTargetInput.value.trim() === "" || Number(temperatureTargetInput.value) !== temperatureTargetState.saved;
+}
+
+function renderTemperatureTarget() {
+    if (!temperatureTargetInput || !temperatureTargetButton || !temperatureTargetStatus) return;
+    const state = temperatureTargetState;
+    const dirty = temperatureTargetDirty();
+    temperatureTargetInput.dataset.dirty = dirty ? "true" : "";
+    temperatureTargetInput.disabled = state.saving;
+    temperatureTargetButton.disabled = state.saving || !dirty || state.saved === null;
+    temperatureTargetButton.textContent = state.saving ? "Tallennetaan…" : (dirty ? "Tallenna" : (state.saved === null ? "Odotetaan…" : "Tallennettu"));
+    temperatureTargetButton.style.background = dirty ? "#fff4ce" : "#263b4a";
+    temperatureTargetButton.style.color = dirty ? "#604400" : "#fff";
+    temperatureTargetButton.style.border = "2px solid " + (dirty ? "#9c7200" : "#263b4a");
+    temperatureTargetButton.style.opacity = "1";
+    const active = state.saved === null ? "Tallennettua tavoitetta ei vielä saatu" :
+        "Käytössä " + state.saved.toFixed(1) + " °C · jatkuu " + (state.saved - 2).toFixed(1) + " °C";
+    temperatureTargetStatus.textContent = state.saving ? "Tallennetaan…" :
+        (state.error ? "Tallennus epäonnistui. " + active :
+         (dirty ? "Tallentamatta · " + active : (state.saved === null ? active : "Tallennettu · " + active)));
+    temperatureTargetStatus.style.color = state.error ? "#a00000" : (dirty ? "#805900" : "#263b4a");
+}
+
+function temperatureTargetSynced(value) {
+    if (!temperatureTargetInput || temperatureTargetState.saving || typeof value !== "number" || !Number.isFinite(value)) return;
+    const dirty = temperatureTargetDirty();
+    temperatureTargetState.saved = value;
+    if (!dirty && document.activeElement !== temperatureTargetInput) temperatureTargetInput.value = value.toFixed(1);
+    renderTemperatureTarget();
+}
+
+async function saveTemperatureTarget() {
+    const state = temperatureTargetState;
+    if (state.saving || state.saved === null) return;
+    const value = Number(temperatureTargetInput.value);
+    if (!temperatureTargetInput.value.trim() || !Number.isFinite(value) || value < 40 || value > 71) {
+        alert("Anna lämpötilatavoite väliltä 40–71 °C.");
+        return;
+    }
+    state.saving = true;
+    state.error = false;
+    renderTemperatureTarget();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    try {
+        const response = await fetch("/api/heater/control", {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({temperature_target: value}), signal: controller.signal
+        });
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        const result = await response.json();
+        if (result.temperature_target !== value) throw new Error("Palvelin ei vahvistanut lämpötilatavoitetta");
+        state.saved = value;
+    } catch (error) {
+        state.error = true;
+        console.error("Temperature target save failed:", error);
+    } finally {
+        clearTimeout(timer);
+        state.saving = false;
+        renderTemperatureTarget();
+    }
+}
+
+if (temperatureTargetInput && temperatureTargetButton) {
+    temperatureTargetInput.addEventListener("input", () => {
+        temperatureTargetState.edited = true;
+        temperatureTargetState.error = false;
+        renderTemperatureTarget();
+    });
+    temperatureTargetButton.addEventListener("click", saveTemperatureTarget);
+    renderTemperatureTarget();
+}
+
 // Käynnistys
 // =========================
 

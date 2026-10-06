@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import threading
 from datetime import datetime
@@ -16,6 +17,8 @@ class HeaterControlService:
 
     MIN_POWER = 0
     MAX_POWER = 6000
+    MIN_TEMPERATURE_TARGET = 40.0
+    MAX_TEMPERATURE_TARGET = 71.0
 
     def __init__(
         self,
@@ -35,9 +38,11 @@ class HeaterControlService:
 
         self.price_start = default_price_start
         self.price_end = default_price_end
+        self.temperature_target = self.MAX_TEMPERATURE_TARGET
 
         self.controller_power = 0
         self.controller_reason = "UNKNOWN"
+        self.controller_status = "UNKNOWN"
         self.controller_timestamp = None
 
         self._load()
@@ -66,6 +71,15 @@ class HeaterControlService:
 
         return parsed.strftime("%H:%M")
 
+    @classmethod
+    def _validate_temperature_target(cls, value):
+        if isinstance(value, bool):
+            raise ValueError("Invalid heater temperature target")
+        value = float(value)
+        if not math.isfinite(value) or not cls.MIN_TEMPERATURE_TARGET <= value <= cls.MAX_TEMPERATURE_TARGET:
+            raise ValueError("Heater temperature target must be 40–71 °C")
+        return value
+
     # ========================================================
     # LOAD
     # ========================================================
@@ -84,6 +98,14 @@ class HeaterControlService:
                 encoding="utf-8"
             ) as f:
                 data = json.load(f)
+
+            if "temperature_target" in data:
+                try:
+                    self.temperature_target = self._validate_temperature_target(data["temperature_target"])
+                except (ValueError, TypeError):
+                    # A corrupt target must not silently raise the cutoff to 71 °C.
+                    self.temperature_target = self.MIN_TEMPERATURE_TARGET
+                    print("Invalid heater temperature target in config; using 40 °C")
 
             mode = data.get(
                 "mode"
@@ -165,27 +187,10 @@ class HeaterControlService:
     # SAVE
     # ========================================================
 
-    def _save(self):
+    def _save(self, data=None):
 
-        data = {
-            "mode": self.mode,
-
-            "spot_price_limit": (
-                self.spot_price_limit
-            ),
-
-            "max_power": (
-                self.max_power
-            ),
-
-            "price_start": (
-                self.price_start
-            ),
-
-            "price_end": (
-                self.price_end
-            ),
-        }
+        if data is None:
+            data = self._settings()
 
         temp_file = (
             self.config_file
@@ -237,12 +242,18 @@ class HeaterControlService:
                     self.price_end
                 ),
 
+                "temperature_target": self.temperature_target,
+
                 "controller_power": (
                     self.controller_power
                 ),
 
                 "controller_reason": (
                     self.controller_reason
+                ),
+
+                "controller_status": (
+                    self.controller_status
                 ),
 
                 "controller_timestamp": (
@@ -254,98 +265,42 @@ class HeaterControlService:
     # UPDATE
     # ========================================================
 
+    def _settings(self):
+        return {key: getattr(self, key) for key in (
+            "mode", "spot_price_limit", "max_power", "price_start",
+            "price_end", "temperature_target",
+        )}
+
     def update(
-        self,
-        mode=None,
-        spot_price_limit=None,
-        max_power=None,
-        price_start=None,
-        price_end=None,
+        self, mode=None, spot_price_limit=None, max_power=None,
+        price_start=None, price_end=None, temperature_target=None,
     ):
-
         with self._lock:
-
+            # Validate and persist the complete candidate before changing live state.
+            candidate = self._settings()
             if mode is not None:
-
                 if mode not in self.ALLOWED_MODES:
-
-                    raise ValueError(
-                        "Invalid heater mode"
-                    )
-
-                self.mode = mode
-
+                    raise ValueError("Invalid heater mode")
+                candidate["mode"] = mode
             if spot_price_limit is not None:
-
-                value = float(
-                    spot_price_limit
-                )
-
-                if not (
-                    -100.0
-                    <= value
-                    <= 500.0
-                ):
-                    raise ValueError(
-                        "Invalid spot price limit"
-                    )
-
-                self.spot_price_limit = value
-
+                value = float(spot_price_limit)
+                if not -100.0 <= value <= 500.0:
+                    raise ValueError("Invalid spot price limit")
+                candidate["spot_price_limit"] = value
             if max_power is not None:
-
-                value = int(
-                    max_power
-                )
-
-                if not (
-                    self.MIN_POWER
-                    <= value
-                    <= self.MAX_POWER
-                ):
-                    raise ValueError(
-                        "Invalid heater max power"
-                    )
-
-                self.max_power = value
-
-            if price_start is not None:
-
-                self.price_start = (
-                    self._validate_time(
-                        price_start
-                    )
-                )
-
-            if price_end is not None:
-
-                self.price_end = (
-                    self._validate_time(
-                        price_end
-                    )
-                )
-
-            self._save()
-
-            return {
-                "mode": self.mode,
-
-                "spot_price_limit": (
-                    self.spot_price_limit
-                ),
-
-                "max_power": (
-                    self.max_power
-                ),
-
-                "price_start": (
-                    self.price_start
-                ),
-
-                "price_end": (
-                    self.price_end
-                ),
-            }
+                value = int(max_power)
+                if not self.MIN_POWER <= value <= self.MAX_POWER:
+                    raise ValueError("Invalid heater max power")
+                candidate["max_power"] = value
+            for key, value in (("price_start", price_start), ("price_end", price_end)):
+                if value is not None:
+                    candidate[key] = self._validate_time(value)
+            if temperature_target is not None:
+                candidate["temperature_target"] = self._validate_temperature_target(temperature_target)
+            self._save(candidate)
+            for key, value in candidate.items():
+                setattr(self, key, value)
+            return dict(candidate)
 
     # ========================================================
     # CONTROLLER STATUS
@@ -355,6 +310,7 @@ class HeaterControlService:
         self,
         power,
         reason,
+        controller_status,
     ):
 
         with self._lock:
@@ -365,6 +321,10 @@ class HeaterControlService:
 
             self.controller_reason = str(
                 reason
+            )
+
+            self.controller_status = str(
+                controller_status
             )
 
             import time
@@ -380,6 +340,10 @@ class HeaterControlService:
 
                 "controller_reason": (
                     self.controller_reason
+                ),
+
+                "controller_status": (
+                    self.controller_status
                 ),
 
                 "controller_timestamp": (

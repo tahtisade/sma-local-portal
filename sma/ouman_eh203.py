@@ -2,6 +2,7 @@ import serial
 import time
 import re
 import threading
+from datetime import datetime, timezone
 
 class OumanEH203:
     """
@@ -377,9 +378,7 @@ class OumanEH203Service:
                 self.status["text"] = text
 
             if available:
-                self.status["updated_at"] = time.strftime(
-                    "%Y-%m-%dT%H:%M:%S"
-                )
+                self.status["updated_at"] = datetime.now(timezone.utc).isoformat()
 
     def _run(self):
         while self.running:
